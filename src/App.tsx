@@ -1,6 +1,7 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { listen } from "@tauri-apps/api/event";
 import { invoke } from "@tauri-apps/api/core";
+import { CopyIcon, CheckIcon, PipetteIcon } from "lucide-react";
 import Logo from "./assets/Logo";
 
 function hexToRgb(hex: string) {
@@ -30,17 +31,37 @@ function contrastColor(r: number, g: number, b: number) {
     : "rgba(255,255,255,0.6)";
 }
 
+const btnStyle: React.CSSProperties = {
+  background: "none",
+  border: "none",
+  padding: 4,
+  cursor: "pointer",
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+};
+
 function App() {
   const [color, setColor] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
-    // Pedir el color almacenado por si el evento llegó antes de montar
     invoke<string | null>("get_last_color").then((c) => { if (c) setColor(c); });
-
     let unlisten: (() => void) | undefined;
     listen<string>("color-picked", (e) => setColor(e.payload))
       .then((fn) => { unlisten = fn; });
     return () => { unlisten?.(); };
+  }, []);
+
+  const handleCopy = useCallback(() => {
+    if (!color) return;
+    navigator.clipboard.writeText(color.replace("#", ""));
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1500);
+  }, [color]);
+
+  const handlePicker = useCallback(() => {
+    invoke("open_picker");
   }, []);
 
   if (!color) {
@@ -48,6 +69,11 @@ function App() {
       <div style={{ position: "fixed", inset: 0, background: "#111" }}>
         <div style={{ position: "absolute", top: 12, left: 14 }}>
           <Logo color="rgba(255,255,255,0.2)" />
+        </div>
+        <div style={{ position: "absolute", top: 8, right: 10, display: "flex", gap: 2 }}>
+          <button style={{ ...btnStyle, color: "rgba(255,255,255,0.2)" }} onClick={handlePicker}>
+            <PipetteIcon size={16} />
+          </button>
         </div>
       </div>
     );
@@ -68,6 +94,15 @@ function App() {
     <div style={{ position: "fixed", inset: 0, background: color, display: "flex", flexDirection: "column" }}>
       <div style={{ position: "absolute", top: 12, left: 14 }}>
         <Logo color={label} />
+      </div>
+
+      <div style={{ position: "absolute", top: 8, right: 10, display: "flex", gap: 2 }}>
+        <button style={{ ...btnStyle, color: label }} onClick={handleCopy}>
+          {copied ? <CheckIcon size={16} /> : <CopyIcon size={16} />}
+        </button>
+        <button style={{ ...btnStyle, color: label }} onClick={handlePicker}>
+          <PipetteIcon size={16} />
+        </button>
       </div>
 
       <div style={{ flex: 1 }} />

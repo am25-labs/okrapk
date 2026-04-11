@@ -14,6 +14,82 @@ struct AppState {
     last_color: Mutex<Option<String>>,
 }
 
+fn launch_picker(app: &tauri::AppHandle) {
+    if let Some(w) = app.get_webview_window("picker") {
+        let _ = w.close();
+        return;
+    }
+
+    let Ok(picker) = tauri::WebviewWindowBuilder::new(
+        app,
+        "picker",
+        tauri::WebviewUrl::App("/?window=picker".into()),
+    )
+    .inner_size(116.0, 34.0)
+    .transparent(true)
+    .always_on_top(true)
+    .decorations(false)
+    .skip_taskbar(true)
+    .resizable(false)
+    .shadow(false)
+    .build()
+    else {
+        return;
+    };
+
+    let mut pt = POINT { x: 0, y: 0 };
+    unsafe { let _ = GetCursorPos(&mut pt); }
+    let _ = picker.set_position(tauri::PhysicalPosition::new(pt.x + 20, pt.y + 20));
+
+    let app_esc = app.clone();
+    tauri::async_runtime::spawn(async move {
+        let _ = app_esc.global_shortcut().on_shortcut(
+            Shortcut::new(None, Code::Escape),
+            |app, _, event| {
+                if event.state() == ShortcutState::Pressed {
+                    if let Some(w) = app.get_webview_window("picker") {
+                        let _ = w.close();
+                    }
+                }
+            },
+        );
+    });
+
+    let app_clone = app.clone();
+    std::thread::spawn(move || {
+        let mut lbutton_was_down = false;
+
+        loop {
+            std::thread::sleep(std::time::Duration::from_millis(16));
+
+            let Some(window) = app_clone.get_webview_window("picker") else {
+                break;
+            };
+
+            let lbutton_down = unsafe { GetAsyncKeyState(0x01) } as u16 & 0x8000 != 0;
+            if lbutton_down && !lbutton_was_down {
+                do_confirm(&app_clone);
+                break;
+            }
+            lbutton_was_down = lbutton_down;
+
+            let mut pt = POINT { x: 0, y: 0 };
+            unsafe { let _ = GetCursorPos(&mut pt); }
+
+            let color = pixel_color_at(pt.x, pt.y);
+            *app_clone.state::<AppState>().last_color.lock().unwrap() = Some(color.clone());
+            let _ = window.emit("color-update", &color);
+
+            let _ = window.set_position(tauri::PhysicalPosition::new(pt.x + 20, pt.y + 20));
+        }
+    });
+}
+
+#[tauri::command]
+fn open_picker(app: tauri::AppHandle) {
+    launch_picker(&app);
+}
+
 fn do_confirm(app: &tauri::AppHandle) {
     let color = match app.state::<AppState>().last_color.lock().unwrap().clone() {
         Some(c) => c,
@@ -121,90 +197,15 @@ pub fn run() {
             app.global_shortcut().on_shortcut(
                 Shortcut::new(Some(Modifiers::ALT), Code::KeyC),
                 |app, _shortcut, event| {
-                    if event.state() != ShortcutState::Pressed {
-                        return;
+                    if event.state() == ShortcutState::Pressed {
+                        launch_picker(app);
                     }
-
-                    if let Some(w) = app.get_webview_window("picker") {
-                        let _ = w.close();
-                        return;
-                    }
-
-                    let Ok(picker) = tauri::WebviewWindowBuilder::new(
-                        app,
-                        "picker",
-                        tauri::WebviewUrl::App("/?window=picker".into()),
-                    )
-                    .inner_size(116.0, 34.0)
-                    .transparent(true)
-                    .always_on_top(true)
-                    .decorations(false)
-                    .skip_taskbar(true)
-                    .resizable(false)
-                    .shadow(false)
-                    .build()
-                    else {
-                        return;
-                    };
-
-                    let mut pt = POINT { x: 0, y: 0 };
-                    unsafe { let _ = GetCursorPos(&mut pt); }
-                    let _ = picker.set_position(tauri::PhysicalPosition::new(pt.x + 20, pt.y + 20));
-
-                    // Escape: cancela el picker
-                    let app_esc = app.clone();
-                    tauri::async_runtime::spawn(async move {
-                        let _ = app_esc.global_shortcut().on_shortcut(
-                            Shortcut::new(None, Code::Escape),
-                            |app, _, event| {
-                                if event.state() == ShortcutState::Pressed {
-                                    if let Some(w) = app.get_webview_window("picker") {
-                                        let _ = w.close();
-                                    }
-                                }
-                            },
-                        );
-                    });
-
-                    // Thread: sigue al cursor, actualiza el color y detecta click izquierdo
-                    let app_clone = app.clone();
-                    std::thread::spawn(move || {
-                        let mut lbutton_was_down = false;
-
-                        loop {
-                            std::thread::sleep(std::time::Duration::from_millis(16));
-
-                            let Some(window) = app_clone.get_webview_window("picker") else {
-                                break;
-                            };
-
-                            // Click izquierdo → confirmar
-                            let lbutton_down = unsafe { GetAsyncKeyState(0x01) } as u16 & 0x8000 != 0;
-                            if lbutton_down && !lbutton_was_down {
-                                do_confirm(&app_clone);
-                                break;
-                            }
-                            lbutton_was_down = lbutton_down;
-
-                            let mut pt = POINT { x: 0, y: 0 };
-                            unsafe { let _ = GetCursorPos(&mut pt); }
-
-                            let color = pixel_color_at(pt.x, pt.y);
-                            *app_clone.state::<AppState>().last_color.lock().unwrap() = Some(color.clone());
-                            let _ = window.emit("color-update", &color);
-
-                            let _ = window.set_position(tauri::PhysicalPosition::new(
-                                pt.x + 20,
-                                pt.y + 20,
-                            ));
-                        }
-                    });
                 },
             )?;
 
             Ok(())
         })
-        .invoke_handler(tauri::generate_handler![get_last_color])
+        .invoke_handler(tauri::generate_handler![get_last_color, open_picker])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
