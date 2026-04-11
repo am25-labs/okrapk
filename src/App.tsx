@@ -61,7 +61,7 @@ function App() {
   }, [color]);
 
   const handlePicker = useCallback(() => {
-    invoke("open_picker");
+    invoke("open_picker").catch(console.error);
   }, []);
 
   if (!color) {

@@ -57,6 +57,8 @@ fn launch_picker(app: &tauri::AppHandle) {
 
     let app_clone = app.clone();
     std::thread::spawn(move || {
+        // Esperar a que el click que abrió el picker se haya liberado
+        std::thread::sleep(std::time::Duration::from_millis(200));
         let mut lbutton_was_down = false;
 
         loop {
@@ -87,7 +89,9 @@ fn launch_picker(app: &tauri::AppHandle) {
 
 #[tauri::command]
 fn open_picker(app: tauri::AppHandle) {
-    launch_picker(&app);
+    tauri::async_runtime::spawn(async move {
+        launch_picker(&app);
+    });
 }
 
 fn do_confirm(app: &tauri::AppHandle) {
