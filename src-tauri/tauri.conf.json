@@ -12,9 +12,12 @@
   "app": {
     "windows": [
       {
+        "label": "main",
         "title": "okrapk",
-        "width": 800,
-        "height": 600
+        "width": 320,
+        "height": 500,
+        "resizable": false,
+        "visible": false
       }
     ],
     "security": {
