@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from "react";
-import { getCurrentWindow } from "@tauri-apps/api/window";
+import { invoke } from "@tauri-apps/api/core";
+import { listen } from "@tauri-apps/api/event";
 
 function Picker() {
   const [color, setColor] = useState("#000000");
@@ -8,25 +9,15 @@ function Picker() {
   useEffect(() => {
     divRef.current?.focus();
 
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") getCurrentWindow().close();
-    };
-    window.addEventListener("keydown", handleKeyDown);
-
     let unlisten: (() => void) | undefined;
-    getCurrentWindow()
-      .listen<string>("color-update", (e) => setColor(e.payload))
+    listen<string>("color-update", (e) => setColor(e.payload))
       .then((fn) => { unlisten = fn; });
 
-    return () => {
-      window.removeEventListener("keydown", handleKeyDown);
-      unlisten?.();
-    };
+    return () => { unlisten?.(); };
   }, []);
 
-  const handleClick = useCallback(async () => {
-    await navigator.clipboard.writeText(color);
-    getCurrentWindow().close();
+  const confirm = useCallback(() => {
+    invoke("confirm_color", { color }).catch(() => {});
   }, [color]);
 
   return (
@@ -45,7 +36,8 @@ function Picker() {
         cursor: "pointer",
         outline: "none",
       }}
-      onClick={handleClick}
+      onMouseDown={confirm}
+      onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") confirm(); }}
     >
       <div
         style={{
