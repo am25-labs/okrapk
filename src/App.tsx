@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { listen } from "@tauri-apps/api/event";
 import { invoke } from "@tauri-apps/api/core";
+import Logo from "./assets/Logo";
 
 function hexToRgb(hex: string) {
   const r = parseInt(hex.slice(1, 3), 16);
@@ -45,13 +46,9 @@ function App() {
   if (!color) {
     return (
       <div style={{ position: "fixed", inset: 0, background: "#111" }}>
-        <span style={{
-          position: "absolute", top: 12, left: 14,
-          fontWeight: 700, fontSize: 11, letterSpacing: 2,
-          color: "rgba(255,255,255,0.2)",
-        }}>
-          OKRA
-        </span>
+        <div style={{ position: "absolute", top: 12, left: 14 }}>
+          <Logo color="rgba(255,255,255,0.2)" />
+        </div>
       </div>
     );
   }
@@ -69,13 +66,9 @@ function App() {
 
   return (
     <div style={{ position: "fixed", inset: 0, background: color, display: "flex", flexDirection: "column" }}>
-      <span style={{
-        position: "absolute", top: 12, left: 14,
-        fontWeight: 700, fontSize: 11, letterSpacing: 2,
-        color: label,
-      }}>
-        OKRA
-      </span>
+      <div style={{ position: "absolute", top: 12, left: 14 }}>
+        <Logo color={label} />
+      </div>
 
       <div style={{ flex: 1 }} />
 
