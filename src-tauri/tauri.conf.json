@@ -17,6 +17,7 @@
         "width": 320,
         "height": 400,
         "resizable": false,
+        "maximizable": false,
         "visible": false
       }
     ],
