@@ -9,6 +9,9 @@ const isPicker = params.get("window") === "picker";
 if (isPicker) {
   document.body.style.background = "transparent";
   document.documentElement.style.background = "transparent";
+} else {
+  document.body.style.background = "#000";
+  document.documentElement.style.background = "#000";
 }
 
 const Component = isPicker ? Picker : App;

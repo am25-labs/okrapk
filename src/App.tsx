@@ -81,7 +81,7 @@ function App() {
 
       <div style={{
         height: "33%",
-        background: "rgba(0,0,0,0.35)",
+        background: `rgb(${Math.round(r*0.65)}, ${Math.round(g*0.65)}, ${Math.round(b*0.65)})`,
         padding: "0 20px",
         display: "flex",
         flexDirection: "column",

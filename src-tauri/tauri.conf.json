@@ -13,9 +13,9 @@
     "windows": [
       {
         "label": "main",
-        "title": "okrapk",
+        "title": "OKRA",
         "width": 320,
-        "height": 500,
+        "height": 400,
         "resizable": false,
         "visible": false
       }
