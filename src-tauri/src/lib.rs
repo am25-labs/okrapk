@@ -4,6 +4,7 @@ use tauri::{
     tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
     Emitter, Manager,
 };
+use tauri_plugin_autostart::MacosLauncher;
 use tauri_plugin_global_shortcut::{Code, GlobalShortcutExt, Modifiers, Shortcut, ShortcutState};
 use windows::Win32::Foundation::{HWND, POINT};
 use windows::Win32::Graphics::Gdi::{GetDC, GetPixel, ReleaseDC};
@@ -139,6 +140,7 @@ fn pixel_color_at(x: i32, y: i32) -> String {
 pub fn run() {
     tauri::Builder::default()
         .manage(AppState { last_color: Mutex::new(None) })
+        .plugin(tauri_plugin_autostart::init(MacosLauncher::LaunchAgent, None))
         .plugin(tauri_plugin_global_shortcut::Builder::new().build())
         .on_window_event(|window, event| {
             match event {
@@ -196,6 +198,10 @@ pub fn run() {
                     }
                 })
                 .build(app)?;
+
+            // Autostart al iniciar sesión
+            use tauri_plugin_autostart::ManagerExt;
+            let _ = app.autolaunch().enable();
 
             // Alt+C: abre el picker, o lo cierra si ya está abierto
             app.global_shortcut().on_shortcut(
