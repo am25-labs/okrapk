@@ -5,6 +5,7 @@ use tauri::{
     Emitter, Manager,
 };
 use tauri_plugin_autostart::MacosLauncher;
+use tauri_plugin_updater::UpdaterExt;
 use tauri_plugin_global_shortcut::{Code, GlobalShortcutExt, Modifiers, Shortcut, ShortcutState};
 use windows::Win32::Foundation::{HWND, POINT};
 use windows::Win32::Graphics::Gdi::{GetDC, GetPixel, ReleaseDC};
@@ -117,6 +118,15 @@ fn do_confirm(app: &tauri::AppHandle) {
 }
 
 #[tauri::command]
+async fn install_update(app: tauri::AppHandle) {
+    if let Ok(updater) = app.updater() {
+        if let Ok(Some(update)) = updater.check().await {
+            let _ = update.download_and_install(|_, _| {}, || {}).await;
+        }
+    }
+}
+
+#[tauri::command]
 fn get_last_color(state: tauri::State<AppState>) -> Option<String> {
     state.last_color.lock().unwrap().clone()
 }
@@ -141,6 +151,7 @@ pub fn run() {
     tauri::Builder::default()
         .manage(AppState { last_color: Mutex::new(None) })
         .plugin(tauri_plugin_autostart::init(MacosLauncher::LaunchAgent, None))
+        .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_global_shortcut::Builder::new().build())
         .on_window_event(|window, event| {
             match event {
@@ -203,6 +214,19 @@ pub fn run() {
             use tauri_plugin_autostart::ManagerExt;
             let _ = app.autolaunch().enable();
 
+            // Buscar actualizaciones al inicio y cada 24 horas
+            let app_update = app.handle().clone();
+            tauri::async_runtime::spawn(async move {
+                loop {
+                    if let Ok(updater) = app_update.updater() {
+                        if let Ok(Some(update)) = updater.check().await {
+                            let _ = app_update.emit("update-available", &update.version);
+                        }
+                    }
+                    tokio::time::sleep(std::time::Duration::from_secs(24 * 60 * 60)).await;
+                }
+            });
+
             // Alt+C: abre el picker, o lo cierra si ya está abierto
             app.global_shortcut().on_shortcut(
                 Shortcut::new(Some(Modifiers::ALT), Code::KeyC),
@@ -215,7 +239,7 @@ pub fn run() {
 
             Ok(())
         })
-        .invoke_handler(tauri::generate_handler![get_last_color, open_picker])
+        .invoke_handler(tauri::generate_handler![get_last_color, open_picker, install_update])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

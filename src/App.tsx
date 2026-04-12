@@ -3,7 +3,7 @@ import { listen } from "@tauri-apps/api/event";
 import { invoke } from "@tauri-apps/api/core";
 import { getVersion } from "@tauri-apps/api/app";
 import { getCurrentWindow } from "@tauri-apps/api/window";
-import { CopyIcon, CheckIcon, PipetteIcon } from "lucide-react";
+import { CopyIcon, CheckIcon, PipetteIcon, ArrowUpCircleIcon } from "lucide-react";
 import Logo from "./assets/Logo";
 
 function hexToRgb(hex: string) {
@@ -46,16 +46,20 @@ const btnStyle: React.CSSProperties = {
 function App() {
   const [color, setColor] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [updateVersion, setUpdateVersion] = useState<string | null>(null);
 
   useEffect(() => {
     invoke<string | null>("get_last_color").then((c) => { if (c) setColor(c); });
     getVersion().then((v) => {
       getCurrentWindow().setTitle(`OKRA - ${v}`);
     });
-    let unlisten: (() => void) | undefined;
+    let unlistenColor: (() => void) | undefined;
+    let unlistenUpdate: (() => void) | undefined;
     listen<string>("color-picked", (e) => setColor(e.payload))
-      .then((fn) => { unlisten = fn; });
-    return () => { unlisten?.(); };
+      .then((fn) => { unlistenColor = fn; });
+    listen<string>("update-available", (e) => setUpdateVersion(e.payload))
+      .then((fn) => { unlistenUpdate = fn; });
+    return () => { unlistenColor?.(); unlistenUpdate?.(); };
   }, []);
 
   const handleCopy = useCallback(() => {
@@ -69,6 +73,10 @@ function App() {
     invoke("open_picker").catch(console.error);
   }, []);
 
+  const handleUpdate = useCallback(() => {
+    invoke("install_update").catch(console.error);
+  }, []);
+
   if (!color) {
     return (
       <div style={{ position: "fixed", inset: 0, background: "#111" }}>
@@ -76,6 +84,11 @@ function App() {
           <Logo color="rgba(255,255,255,0.2)" />
         </div>
         <div style={{ position: "absolute", top: 8, right: 10, display: "flex", gap: 2 }}>
+          {updateVersion && (
+            <button style={{ ...btnStyle, color: "#e9f52f" }} onClick={handleUpdate} title={`Update to ${updateVersion}`}>
+              <ArrowUpCircleIcon size={16} />
+            </button>
+          )}
           <button style={{ ...btnStyle, color: "rgba(255,255,255,0.2)" }} onClick={handlePicker}>
             <PipetteIcon size={16} />
           </button>
@@ -102,6 +115,11 @@ function App() {
       </div>
 
       <div style={{ position: "absolute", top: 8, right: 10, display: "flex", gap: 2 }}>
+        {updateVersion && (
+          <button style={{ ...btnStyle, color: "#e9f52f" }} onClick={handleUpdate} title={`Update to ${updateVersion}`}>
+            <ArrowUpCircleIcon size={16} />
+          </button>
+        )}
         <button style={{ ...btnStyle, color: label }} onClick={handleCopy}>
           {copied ? <CheckIcon size={16} /> : <CopyIcon size={16} />}
         </button>
