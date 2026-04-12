@@ -3,7 +3,7 @@ title: "Terms & Conditions"
 updated: "April 12, 2026"
 ---
 
-These terms govern your access to the OKRA website (okrapk.app) and your use of the OKRA desktop application. OKRA is developed and maintained by AM25, S.A.S. DE C.V. (hereinafter "AM25"). By downloading, installing, or using OKRA, you agree to these terms.
+These terms govern your access to the OKRA website (okrapk.app) and your use of the OKRA desktop application. OKRA is developed and maintained by **AM25, S.A.S. DE C.V.** (hereinafter "AM25"). By downloading, installing, or using OKRA, you agree to these terms.
 
 For questions or inquiries, please contact via [email](mailto:hola@am25.work).
 
@@ -15,9 +15,9 @@ OKRA is open-source software released under the [MIT License](https://github.com
 
 You agree not to:
 
-- Use OKRA for any unlawful purpose
-- Attempt to reverse-engineer, decompile, or tamper with any part of OKRA beyond what is permitted by the MIT License and applicable law
-- Use the OKRA name, logo, or branding in a way that implies endorsement by AM25 without prior written permission
+- Use OKRA for any unlawful purpose.
+- Attempt to reverse-engineer, decompile, or tamper with any part of OKRA beyond what is permitted by the MIT License and applicable law.
+- Use the OKRA name, logo, or branding in a way that implies endorsement by AM25 without prior written permission.
 
 ## No Warranty
 

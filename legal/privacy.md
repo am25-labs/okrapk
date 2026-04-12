@@ -3,25 +3,25 @@ title: "Privacy Policy"
 updated: "April 12, 2026"
 ---
 
-This website is managed by AM25, S.A.S. de C.V. For questions or inquiries, please contact via [email](mailto:hola@am25.work). OKRA is developed and maintained by AM25. This policy explains what data is collected when you use the OKRA website (okrapk.app) and the OKRA desktop application.
+This website is managed by **AM25, S.A.S. de C.V.** (hereinafter “AM25”). For questions or inquiries, please contact via [email](mailto:hola@am25.work). OKRA is developed and maintained by AM25. This policy explains what data is collected when you use the OKRA website (okrapk.app) and the OKRA desktop application.
 
 ## OKRA Desktop Application
 
 OKRA is a local desktop application. It operates entirely on you device and does not connect to any external server.
 
-- No personal data is collected
-- No usage data is transmitted
-- Colors picked by the user are stored locally on device only
-- No telemetry, analytics, or crash reporting is sent to AM25 or any third-party
+- No personal data is collected.
+- No usage data is transmitted.
+- Colors picked by the user are stored locally on device only.
+- No telemetry, analytics, or crash reporting is sent to AM25 or any third-party.
 
 ## Site analytics
 
 This site uses [Plausible Analytics](https://plausible.io), a self-hosted, privacy-oriented tool with the sole purpose of understanding general site usage and improving the user experience.
 
-- Plausible does not use cookies
-- No individual user tracking is performed
-- No full IP addresses are stored
-- The data collected is aggregated and anonymous
+- Plausible does not use cookies.
+- No individual user tracking is performed.
+- No full IP addresses are stored.
+- The data collected is aggregated and anonymous.
 
 The analytical information is used exclusively for statistical purposes.
 
@@ -41,9 +41,9 @@ This website does not actively collect personal data through tracking systems or
 
 If you submit information voluntarily (e.g., via contact forms or payment links), you may request:
 
-- Access to your data
-- Deletion of your data
-- Limitation or objection to processing
+- Access to your data.
+- Deletion of your data.
+- Limitation or objection to processing.
 
 To exercise these rights, please contact via [email](mailto:hola@am25.work).
 
