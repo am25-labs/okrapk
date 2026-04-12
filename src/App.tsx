@@ -121,7 +121,7 @@ function App() {
             <span style={{
               width: 40,
               fontSize: 12,
-              fontFamily: "monospace",
+              fontWeight: 700,
               color: "rgba(255,255,255,0.45)",
               flexShrink: 0,
             }}>
@@ -129,7 +129,7 @@ function App() {
             </span>
             <span style={{
               fontSize: 14,
-              fontFamily: "monospace",
+              fontFamily: '"JetBrains Mono", monospace',
               color: "#fff",
             }}>
               {value}

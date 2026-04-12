@@ -49,7 +49,7 @@ function Picker() {
           flexShrink: 0,
         }}
       />
-      <span style={{ color: "#fff", fontSize: 13, fontFamily: "monospace" }}>
+      <span style={{ color: "#fff", fontSize: 13, fontFamily: '"JetBrains Mono", monospace' }}>
         {color}
       </span>
     </div>
