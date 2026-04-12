@@ -1,6 +1,8 @@
 import { useState, useEffect, useCallback } from "react";
 import { listen } from "@tauri-apps/api/event";
 import { invoke } from "@tauri-apps/api/core";
+import { getVersion } from "@tauri-apps/api/app";
+import { getCurrentWindow } from "@tauri-apps/api/window";
 import { CopyIcon, CheckIcon, PipetteIcon } from "lucide-react";
 import Logo from "./assets/Logo";
 
@@ -47,6 +49,9 @@ function App() {
 
   useEffect(() => {
     invoke<string | null>("get_last_color").then((c) => { if (c) setColor(c); });
+    getVersion().then((v) => {
+      getCurrentWindow().setTitle(`OKRA - ${v}`);
+    });
     let unlisten: (() => void) | undefined;
     listen<string>("color-picked", (e) => setColor(e.payload))
       .then((fn) => { unlisten = fn; });
