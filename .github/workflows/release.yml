@@ -34,10 +34,6 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           tagName: ${{ github.ref_name }}
-          releaseName: OKRA ${{ github.ref_name }}
-          releaseBody: |
-            Descarga e instala `okrapk_*_x64-setup.exe`.
-
-            > Windows puede mostrar una advertencia de SmartScreen — click en "Más información" → "Ejecutar de todas formas".
+          releaseName: ${{ github.ref_name }}
           releaseDraft: false
           prerelease: ${{ startsWith(github.ref_name, '0.') }}
