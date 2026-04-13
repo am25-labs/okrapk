@@ -36,8 +36,6 @@ mod macos_impl {
     extern "C" {
         fn CGEventCreate(source: *const std::ffi::c_void) -> *mut std::ffi::c_void;
         fn CGEventGetLocation(event: *const std::ffi::c_void) -> CGPoint;
-        fn CGMainDisplayID() -> u32;
-        fn CGDisplayBounds(display: u32) -> CGRect;
         fn CGWindowListCreateImage(
             screenBounds: CGRect,
             listOption: u32,
@@ -53,33 +51,24 @@ mod macos_impl {
         fn CGEventSourceButtonState(stateID: u32, button: u32) -> bool;
     }
 
-    /// Returns logical point coordinates (top-left origin).
+    /// Returns screen coordinates (top-left origin, Y increases downward).
+    /// CGEventGetLocation already uses this system — no flip needed.
     pub fn get_cursor_pos() -> (i32, i32) {
         unsafe {
             let event = CGEventCreate(std::ptr::null());
             let pt = CGEventGetLocation(event);
             CFRelease(event);
-            let bounds = CGDisplayBounds(CGMainDisplayID());
-            let height = bounds.size.height;
-            // CGEventGetLocation returns logical points with bottom-left origin.
-            // Flip Y to get top-left origin.
-            (pt.x as i32, (height - pt.y) as i32)
+            (pt.x as i32, pt.y as i32)
         }
     }
 
-    /// Samples the pixel color at the given logical point coordinates (top-left origin).
+    /// Samples the pixel color at the given screen coordinates (top-left origin).
+    /// CGWindowListCreateImage uses the same coordinate system as CGEventGetLocation.
     /// Requires Screen Recording permission on macOS 10.15+.
     pub fn pixel_color_at(x: i32, y: i32) -> String {
         unsafe {
-            let bounds = CGDisplayBounds(CGMainDisplayID());
-            let height = bounds.size.height;
-
-            // CGWindowListCreateImage uses CG coordinates (bottom-left origin).
-            // Row at logical top-y spans CG y range [height-top_y-1, height-top_y).
-            let cg_y = height - (y as f64) - 1.0;
-
             let rect = CGRect {
-                origin: CGPoint { x: x as f64, y: cg_y },
+                origin: CGPoint { x: x as f64, y: y as f64 },
                 size: CGSize { width: 1.0, height: 1.0 },
             };
 
@@ -328,6 +317,7 @@ pub fn run() {
 
             TrayIconBuilder::new()
                 .icon(app.default_window_icon().unwrap().clone())
+                .icon_as_template(true)
                 .menu(&menu)
                 .on_menu_event(|app, event| match event.id.as_ref() {
                     "show" => {
