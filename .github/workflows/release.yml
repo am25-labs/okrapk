@@ -40,6 +40,7 @@ jobs:
 
   release-macos:
     runs-on: macos-latest
+    needs: release-windows
     permissions:
       contents: write
 
