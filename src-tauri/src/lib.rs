@@ -7,10 +7,170 @@ use tauri::{
 use tauri_plugin_autostart::MacosLauncher;
 use tauri_plugin_updater::UpdaterExt;
 use tauri_plugin_global_shortcut::{Code, GlobalShortcutExt, Modifiers, Shortcut, ShortcutState};
+
+#[cfg(target_os = "windows")]
 use windows::Win32::Foundation::{HWND, POINT};
+#[cfg(target_os = "windows")]
 use windows::Win32::Graphics::Gdi::{GetDC, GetPixel, ReleaseDC};
+#[cfg(target_os = "windows")]
 use windows::Win32::UI::Input::KeyboardAndMouse::GetAsyncKeyState;
+#[cfg(target_os = "windows")]
 use windows::Win32::UI::WindowsAndMessaging::GetCursorPos;
+
+// macOS platform implementation using CoreGraphics
+#[cfg(target_os = "macos")]
+mod macos_impl {
+    #[repr(C)]
+    #[derive(Clone, Copy)]
+    struct CGPoint { x: f64, y: f64 }
+
+    #[repr(C)]
+    #[derive(Clone, Copy)]
+    struct CGSize { width: f64, height: f64 }
+
+    #[repr(C)]
+    #[derive(Clone, Copy)]
+    struct CGRect { origin: CGPoint, size: CGSize }
+
+    #[link(name = "CoreGraphics", kind = "framework")]
+    extern "C" {
+        fn CGEventCreate(source: *const std::ffi::c_void) -> *mut std::ffi::c_void;
+        fn CGEventGetLocation(event: *const std::ffi::c_void) -> CGPoint;
+        fn CGMainDisplayID() -> u32;
+        fn CGDisplayBounds(display: u32) -> CGRect;
+        fn CGWindowListCreateImage(
+            screenBounds: CGRect,
+            listOption: u32,
+            windowID: u32,
+            imageOption: u32,
+        ) -> *mut std::ffi::c_void;
+        fn CGImageGetDataProvider(image: *const std::ffi::c_void) -> *const std::ffi::c_void;
+        fn CGImageGetBitsPerPixel(image: *const std::ffi::c_void) -> usize;
+        fn CGDataProviderCopyData(provider: *const std::ffi::c_void) -> *const std::ffi::c_void;
+        fn CFRelease(cf: *const std::ffi::c_void);
+        fn CFDataGetBytePtr(data: *const std::ffi::c_void) -> *const u8;
+        fn CFDataGetLength(data: *const std::ffi::c_void) -> isize;
+        fn CGEventSourceButtonState(stateID: u32, button: u32) -> bool;
+    }
+
+    /// Returns logical point coordinates (top-left origin).
+    pub fn get_cursor_pos() -> (i32, i32) {
+        unsafe {
+            let event = CGEventCreate(std::ptr::null());
+            let pt = CGEventGetLocation(event);
+            CFRelease(event);
+            let bounds = CGDisplayBounds(CGMainDisplayID());
+            let height = bounds.size.height;
+            // CGEventGetLocation returns logical points with bottom-left origin.
+            // Flip Y to get top-left origin.
+            (pt.x as i32, (height - pt.y) as i32)
+        }
+    }
+
+    /// Samples the pixel color at the given logical point coordinates (top-left origin).
+    /// Requires Screen Recording permission on macOS 10.15+.
+    pub fn pixel_color_at(x: i32, y: i32) -> String {
+        unsafe {
+            let bounds = CGDisplayBounds(CGMainDisplayID());
+            let height = bounds.size.height;
+
+            // CGWindowListCreateImage uses CG coordinates (bottom-left origin).
+            // Row at logical top-y spans CG y range [height-top_y-1, height-top_y).
+            let cg_y = height - (y as f64) - 1.0;
+
+            let rect = CGRect {
+                origin: CGPoint { x: x as f64, y: cg_y },
+                size: CGSize { width: 1.0, height: 1.0 },
+            };
+
+            // kCGWindowListOptionOnScreenOnly = 1, kCGNullWindowID = 0, kCGWindowImageDefault = 0
+            let img = CGWindowListCreateImage(rect, 1, 0, 0);
+            if img.is_null() {
+                return "#000000".to_string();
+            }
+
+            let provider = CGImageGetDataProvider(img);
+            let data = CGDataProviderCopyData(provider);
+
+            let color = if !data.is_null() {
+                let len = CFDataGetLength(data);
+                let bpp = CGImageGetBitsPerPixel(img);
+                let bytes_per_pixel = bpp / 8;
+
+                if bytes_per_pixel >= 3 && len >= bytes_per_pixel as isize {
+                    let ptr = CFDataGetBytePtr(data);
+                    let slice = std::slice::from_raw_parts(ptr, bytes_per_pixel);
+                    // CGWindowListCreateImage produces BGRA pixel data on macOS.
+                    let b = slice[0];
+                    let g = slice[1];
+                    let r = slice[2];
+                    format!("#{:02X}{:02X}{:02X}", r, g, b)
+                } else {
+                    "#000000".to_string()
+                }
+            } else {
+                "#000000".to_string()
+            };
+
+            if !data.is_null() {
+                CFRelease(data);
+            }
+            CFRelease(img);
+            color
+        }
+    }
+
+    /// Returns true if the left mouse button is currently held down.
+    pub fn is_left_button_down() -> bool {
+        // kCGEventSourceStateHIDSystemState = 1, kCGMouseButtonLeft = 0
+        unsafe { CGEventSourceButtonState(1, 0) }
+    }
+}
+
+// Platform-agnostic wrappers
+
+#[cfg(target_os = "windows")]
+fn platform_get_cursor_pos() -> (i32, i32) {
+    let mut pt = POINT { x: 0, y: 0 };
+    unsafe { let _ = GetCursorPos(&mut pt); }
+    (pt.x, pt.y)
+}
+
+#[cfg(target_os = "macos")]
+fn platform_get_cursor_pos() -> (i32, i32) {
+    macos_impl::get_cursor_pos()
+}
+
+#[cfg(target_os = "windows")]
+fn pixel_color_at(x: i32, y: i32) -> String {
+    unsafe {
+        let hdc = GetDC(HWND(std::ptr::null_mut()));
+        let color = GetPixel(hdc, x, y);
+        ReleaseDC(HWND(std::ptr::null_mut()), hdc);
+        if color.0 == 0xFFFFFFFF {
+            return "#000000".to_string();
+        }
+        let r = (color.0 & 0xFF) as u8;
+        let g = ((color.0 >> 8) & 0xFF) as u8;
+        let b = ((color.0 >> 16) & 0xFF) as u8;
+        format!("#{:02X}{:02X}{:02X}", r, g, b)
+    }
+}
+
+#[cfg(target_os = "macos")]
+fn pixel_color_at(x: i32, y: i32) -> String {
+    macos_impl::pixel_color_at(x, y)
+}
+
+#[cfg(target_os = "windows")]
+fn platform_is_left_button_down() -> bool {
+    (unsafe { GetAsyncKeyState(0x01) }) as u16 & 0x8000 != 0
+}
+
+#[cfg(target_os = "macos")]
+fn platform_is_left_button_down() -> bool {
+    macos_impl::is_left_button_down()
+}
 
 struct AppState {
     last_color: Mutex<Option<String>>,
@@ -39,9 +199,11 @@ fn launch_picker(app: &tauri::AppHandle) {
         return;
     };
 
-    let mut pt = POINT { x: 0, y: 0 };
-    unsafe { let _ = GetCursorPos(&mut pt); }
-    let _ = picker.set_position(tauri::PhysicalPosition::new(pt.x + 20, pt.y + 20));
+    let (cx, cy) = platform_get_cursor_pos();
+    #[cfg(target_os = "windows")]
+    let _ = picker.set_position(tauri::PhysicalPosition::<i32>::new(cx + 20, cy + 20));
+    #[cfg(target_os = "macos")]
+    let _ = picker.set_position(tauri::LogicalPosition::<f64>::new((cx + 20) as f64, (cy + 20) as f64));
 
     let app_esc = app.clone();
     tauri::async_runtime::spawn(async move {
@@ -70,21 +232,23 @@ fn launch_picker(app: &tauri::AppHandle) {
                 break;
             };
 
-            let lbutton_down = unsafe { GetAsyncKeyState(0x01) } as u16 & 0x8000 != 0;
+            let lbutton_down = platform_is_left_button_down();
             if lbutton_down && !lbutton_was_down {
                 do_confirm(&app_clone);
                 break;
             }
             lbutton_was_down = lbutton_down;
 
-            let mut pt = POINT { x: 0, y: 0 };
-            unsafe { let _ = GetCursorPos(&mut pt); }
+            let (cx, cy) = platform_get_cursor_pos();
 
-            let color = pixel_color_at(pt.x, pt.y);
+            let color = pixel_color_at(cx, cy);
             *app_clone.state::<AppState>().last_color.lock().unwrap() = Some(color.clone());
             let _ = window.emit("color-update", &color);
 
-            let _ = window.set_position(tauri::PhysicalPosition::new(pt.x + 20, pt.y + 20));
+            #[cfg(target_os = "windows")]
+            let _ = window.set_position(tauri::PhysicalPosition::<i32>::new(cx + 20, cy + 20));
+            #[cfg(target_os = "macos")]
+            let _ = window.set_position(tauri::LogicalPosition::<f64>::new((cx + 20) as f64, (cy + 20) as f64));
         }
     });
 }
@@ -129,21 +293,6 @@ async fn install_update(app: tauri::AppHandle) {
 #[tauri::command]
 fn get_last_color(state: tauri::State<AppState>) -> Option<String> {
     state.last_color.lock().unwrap().clone()
-}
-
-fn pixel_color_at(x: i32, y: i32) -> String {
-    unsafe {
-        let hdc = GetDC(HWND(std::ptr::null_mut()));
-        let color = GetPixel(hdc, x, y);
-        ReleaseDC(HWND(std::ptr::null_mut()), hdc);
-        if color.0 == 0xFFFFFFFF {
-            return "#000000".to_string();
-        }
-        let r = (color.0 & 0xFF) as u8;
-        let g = ((color.0 >> 8) & 0xFF) as u8;
-        let b = ((color.0 >> 16) & 0xFF) as u8;
-        format!("#{:02X}{:02X}{:02X}", r, g, b)
-    }
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
