@@ -19,7 +19,8 @@
         "height": 400,
         "resizable": false,
         "maximizable": false,
-        "visible": false
+        "visible": false,
+        "alwaysOnTop": true
       }
     ],
     "security": {
