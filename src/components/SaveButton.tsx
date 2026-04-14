@@ -1,4 +1,4 @@
-import { BookmarkIcon, BookmarkCheckIcon, CloudOffIcon, LoaderIcon } from "lucide-react";
+import { SaveIcon, CloudOffIcon, LoaderIcon } from "lucide-react";
 import type { SyncStatus } from "../hooks/useSync";
 
 interface Props {
@@ -29,7 +29,7 @@ export default function SaveButton({ syncStatus, labelColor, onSave }: Props) {
   if (syncStatus === "saved") {
     return (
       <button style={{ ...btnStyle, color: labelColor }} disabled>
-        <BookmarkCheckIcon size={16} />
+        <SaveIcon size={16} />
       </button>
     );
   }
@@ -44,7 +44,7 @@ export default function SaveButton({ syncStatus, labelColor, onSave }: Props) {
 
   return (
     <button style={{ ...btnStyle, color: labelColor }} onClick={onSave} title="Save color">
-      <BookmarkIcon size={16} />
+      <SaveIcon size={16} />
     </button>
   );
 }
