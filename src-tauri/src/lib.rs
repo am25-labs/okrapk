@@ -315,19 +315,24 @@ pub fn run() {
             #[cfg(target_os = "macos")]
             app.set_activation_policy(tauri::ActivationPolicy::Accessory);
             let show = MenuItem::with_id(app, "show", "Abrir", true, None::<&str>)?;
+            let hub = MenuItem::with_id(app, "hub", "Hub", true, None::<&str>)?;
             let quit = MenuItem::with_id(app, "quit", "Salir", true, None::<&str>)?;
-            let menu = Menu::with_items(app, &[&show, &quit])?;
+            let menu = Menu::with_items(app, &[&show, &hub, &quit])?;
 
             TrayIconBuilder::new()
                 .icon(app.default_window_icon().unwrap().clone())
                 .icon_as_template(true)
                 .menu(&menu)
+                .show_menu_on_left_click(false)
                 .on_menu_event(|app, event| match event.id.as_ref() {
                     "show" => {
                         if let Some(window) = app.get_webview_window("main") {
                             let _ = window.show();
                             let _ = window.set_focus();
                         }
+                    }
+                    "hub" => {
+                        let _ = open::that("https://hub.okrapk.app");
                     }
                     "quit" => app.exit(0),
                     _ => {}
@@ -341,12 +346,8 @@ pub fn run() {
                     {
                         let app = tray.app_handle();
                         if let Some(window) = app.get_webview_window("main") {
-                            if window.is_visible().unwrap_or(false) {
-                                let _ = window.hide();
-                            } else {
-                                let _ = window.show();
-                                let _ = window.set_focus();
-                            }
+                            let _ = window.show();
+                            let _ = window.set_focus();
                         }
                     }
                 })
