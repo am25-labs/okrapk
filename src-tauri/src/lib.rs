@@ -290,6 +290,7 @@ pub fn run() {
         .manage(AppState { last_color: Mutex::new(None) })
         .plugin(tauri_plugin_autostart::init(MacosLauncher::LaunchAgent, None))
         .plugin(tauri_plugin_updater::Builder::new().build())
+        .plugin(tauri_plugin_store::Builder::default().build())
         .plugin(tauri_plugin_global_shortcut::Builder::new().build())
         .on_window_event(|window, event| {
             match event {
