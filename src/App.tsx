@@ -6,6 +6,11 @@ import { getCurrentWindow } from "@tauri-apps/api/window";
 import { CopyIcon, CheckIcon, PipetteIcon, ArrowUpCircleIcon } from "lucide-react";
 import Logo from "./assets/Logo";
 import { hexToRgb, rgbToHsl } from "./lib/color";
+import { useAuth } from "./hooks/useAuth";
+import { useSync } from "./hooks/useSync";
+import SyncIcon from "./components/SyncIcon";
+import SaveButton from "./components/SaveButton";
+import AuthPanel from "./components/AuthPanel";
 
 function contrastColor(r: number, g: number, b: number) {
   return (0.299 * r + 0.587 * g + 0.114 * b) / 255 > 0.5
@@ -27,6 +32,10 @@ function App() {
   const [color, setColor] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [updateVersion, setUpdateVersion] = useState<string | null>(null);
+  const [showAuth, setShowAuth] = useState(false);
+
+  const auth = useAuth();
+  const { syncStatus, saveColor } = useSync(auth);
 
   useEffect(() => {
     invoke<string | null>("get_last_color").then((c) => { if (c) setColor(c); });
@@ -69,10 +78,12 @@ function App() {
               <ArrowUpCircleIcon size={16} />
             </button>
           )}
+          <SyncIcon auth={auth} labelColor="rgba(255,255,255,0.2)" onClick={() => setShowAuth((v) => !v)} />
           <button style={{ ...btnStyle, color: "rgba(255,255,255,0.2)" }} onClick={handlePicker}>
             <PipetteIcon size={16} />
           </button>
         </div>
+        {showAuth && <AuthPanel auth={auth} onClose={() => setShowAuth(false)} />}
       </div>
     );
   }
@@ -100,9 +111,13 @@ function App() {
             <ArrowUpCircleIcon size={16} />
           </button>
         )}
+        {auth.isLoggedIn && (
+          <SaveButton syncStatus={syncStatus} labelColor={label} onSave={() => saveColor(color)} />
+        )}
         <button style={{ ...btnStyle, color: label }} onClick={handleCopy}>
           {copied ? <CheckIcon size={16} /> : <CopyIcon size={16} />}
         </button>
+        <SyncIcon auth={auth} labelColor={label} onClick={() => setShowAuth((v) => !v)} />
         <button style={{ ...btnStyle, color: label }} onClick={handlePicker}>
           <PipetteIcon size={16} />
         </button>
@@ -140,6 +155,8 @@ function App() {
           </div>
         ))}
       </div>
+
+      {showAuth && <AuthPanel auth={auth} onClose={() => setShowAuth(false)} />}
     </div>
   );
 }
