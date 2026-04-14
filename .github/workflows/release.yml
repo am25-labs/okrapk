@@ -32,6 +32,8 @@ jobs:
         uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VITE_API_URL: ${{ secrets.VITE_API_URL }}
+          VITE_DESKTOP_KEY: ${{ secrets.VITE_DESKTOP_KEY }}
         with:
           tagName: ${{ github.ref_name }}
           releaseName: ${{ github.ref_name }}
