@@ -114,10 +114,10 @@ function App() {
         {auth.isLoggedIn && (
           <SaveButton syncStatus={syncStatus} labelColor={label} onSave={() => saveColor(color)} />
         )}
+        <SyncIcon auth={auth} labelColor={label} onClick={() => setShowAuth((v) => !v)} />
         <button style={{ ...btnStyle, color: label }} onClick={handleCopy}>
           {copied ? <CheckIcon size={16} /> : <CopyIcon size={16} />}
         </button>
-        <SyncIcon auth={auth} labelColor={label} onClick={() => setShowAuth((v) => !v)} />
         <button style={{ ...btnStyle, color: label }} onClick={handlePicker}>
           <PipetteIcon size={16} />
         </button>
