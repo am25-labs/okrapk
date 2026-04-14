@@ -1,4 +1,4 @@
-import { UserIcon } from "lucide-react";
+import { UserRoundIcon } from "lucide-react";
 import type { AuthState } from "../hooks/useAuth";
 
 interface Props {
@@ -18,10 +18,9 @@ const btnStyle: React.CSSProperties = {
 };
 
 export default function SyncIcon({ auth, labelColor, onClick }: Props) {
-  const color = auth.isLoggedIn ? labelColor : "rgba(255,255,255,0.2)";
   return (
-    <button style={{ ...btnStyle, color }} onClick={onClick} title={auth.isLoggedIn ? auth.user?.email : "Sign in"}>
-      <UserIcon size={16} />
+    <button style={{ ...btnStyle, color: labelColor }} onClick={onClick} title={auth.isLoggedIn ? auth.user?.email : "Sign in"}>
+      <UserRoundIcon size={16} />
     </button>
   );
 }
