@@ -1,6 +1,6 @@
 use std::sync::Mutex;
 use tauri::{
-    menu::{Menu, MenuItem},
+    menu::{Menu, MenuItem, PredefinedMenuItem},
     tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
     Emitter, Manager,
 };
@@ -270,6 +270,14 @@ fn do_confirm(app: &tauri::AppHandle) {
     }
 }
 
+async fn check_for_update(app: &tauri::AppHandle) {
+    if let Ok(updater) = app.updater() {
+        if let Ok(Some(update)) = updater.check().await {
+            let _ = app.emit("update-available", &update.version);
+        }
+    }
+}
+
 #[tauri::command]
 async fn install_update(app: tauri::AppHandle) {
     if let Ok(updater) = app.updater() {
@@ -317,8 +325,10 @@ pub fn run() {
             let show = MenuItem::with_id(app, "show", "Open OKRA", true, None::<&str>)?;
             let hub = MenuItem::with_id(app, "hub", "Go to Color Hub", true, None::<&str>)?;
             let swatch = MenuItem::with_id(app, "swatch", "Pick a Color", true, Some("alt+c"))?;
+            let check_update = MenuItem::with_id(app, "check-update", "Check for Updates", true, None::<&str>)?;
             let quit = MenuItem::with_id(app, "quit", "Exit OKRA", true, None::<&str>)?;
-            let menu = Menu::with_items(app, &[&swatch, &hub, &show, &quit])?;
+            let separator = PredefinedMenuItem::separator(app)?;
+            let menu = Menu::with_items(app, &[&swatch, &hub, &show, &separator, &check_update, &quit])?;
 
             TrayIconBuilder::new()
                 .icon(app.default_window_icon().unwrap().clone())
@@ -337,6 +347,12 @@ pub fn run() {
                     }
                     "swatch" => {
                         launch_picker(app);
+                    }
+                    "check-update" => {
+                        let app = app.clone();
+                        tauri::async_runtime::spawn(async move {
+                            check_for_update(&app).await;
+                        });
                     }
                     "quit" => app.exit(0),
                     _ => {}
@@ -365,12 +381,8 @@ pub fn run() {
             let app_update = app.handle().clone();
             tauri::async_runtime::spawn(async move {
                 loop {
-                    if let Ok(updater) = app_update.updater() {
-                        if let Ok(Some(update)) = updater.check().await {
-                            let _ = app_update.emit("update-available", &update.version);
-                        }
-                    }
-                    tokio::time::sleep(std::time::Duration::from_secs(24 * 60 * 60)).await;
+                    check_for_update(&app_update).await;
+                    tokio::time::sleep(std::time::Duration::from_secs(12 * 60 * 60)).await;
                 }
             });
 
