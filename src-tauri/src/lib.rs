@@ -314,10 +314,11 @@ pub fn run() {
         .setup(|app| {
             #[cfg(target_os = "macos")]
             app.set_activation_policy(tauri::ActivationPolicy::Accessory);
-            let show = MenuItem::with_id(app, "show", "Abrir", true, None::<&str>)?;
-            let hub = MenuItem::with_id(app, "hub", "Hub", true, None::<&str>)?;
-            let quit = MenuItem::with_id(app, "quit", "Salir", true, None::<&str>)?;
-            let menu = Menu::with_items(app, &[&show, &hub, &quit])?;
+            let show = MenuItem::with_id(app, "show", "Open OKRA", true, None::<&str>)?;
+            let hub = MenuItem::with_id(app, "hub", "Go to Color Hub", true, None::<&str>)?;
+            let swatch = MenuItem::with_id(app, "swatch", "Pick a Color", true, Some("alt+c"))?;
+            let quit = MenuItem::with_id(app, "quit", "Exit OKRA", true, None::<&str>)?;
+            let menu = Menu::with_items(app, &[&swatch, &hub, &show, &quit])?;
 
             TrayIconBuilder::new()
                 .icon(app.default_window_icon().unwrap().clone())
@@ -333,6 +334,9 @@ pub fn run() {
                     }
                     "hub" => {
                         let _ = open::that("https://hub.okrapk.app");
+                    }
+                    "swatch" => {
+                        launch_picker(app);
                     }
                     "quit" => app.exit(0),
                     _ => {}
