@@ -5,7 +5,7 @@ import { getVersion } from "@tauri-apps/api/app";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { CopyIcon, CheckIcon, PipetteIcon, ArrowUpCircleIcon } from "lucide-react";
 import Logo from "./assets/Logo";
-import { hexToRgb, rgbToHsl } from "./lib/color";
+import { hexToRgb, rgbToHsl, rgbToHex } from "./lib/color";
 import { useAuth } from "./hooks/useAuth";
 import { useSync } from "./hooks/useSync";
 import SyncIcon from "./components/SyncIcon";
@@ -31,6 +31,7 @@ const btnStyle: React.CSSProperties = {
 function App() {
   const [color, setColor] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [copiedVariant, setCopiedVariant] = useState<"tint" | "shade" | null>(null);
   const [updateVersion, setUpdateVersion] = useState<string | null>(null);
   const [showAuth, setShowAuth] = useState(false);
 
@@ -92,6 +93,24 @@ function App() {
   const { h, s, l } = rgbToHsl(r, g, b);
   const label = contrastColor(r, g, b);
 
+  const tintHex = rgbToHex(
+    Math.round(r + (255 - r) * 0.35),
+    Math.round(g + (255 - g) * 0.35),
+    Math.round(b + (255 - b) * 0.35),
+  );
+  const shadeHex = rgbToHex(
+    Math.round(r * 0.65),
+    Math.round(g * 0.65),
+    Math.round(b * 0.65),
+  );
+
+  function handleCopyVariant(variant: "tint" | "shade") {
+    const hex = variant === "tint" ? tintHex : shadeHex;
+    navigator.clipboard.writeText(hex.replace("#", ""));
+    setCopiedVariant(variant);
+    setTimeout(() => setCopiedVariant(null), 1500);
+  }
+
   const rows = [
     { format: "HEX", value: color },
     { format: "RGB", value: `${r}, ${g}, ${b}` },
@@ -124,6 +143,23 @@ function App() {
       </div>
 
       <div style={{ flex: 1 }} />
+
+      <div style={{ display: "flex", height: 28 }}>
+        <div
+          style={{ flex: 1, background: tintHex, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
+          onClick={() => handleCopyVariant("tint")}
+          title={tintHex}
+        >
+          {copiedVariant === "tint" && <CheckIcon size={12} color="rgba(0,0,0,0.35)" />}
+        </div>
+        <div
+          style={{ flex: 1, background: shadeHex, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
+          onClick={() => handleCopyVariant("shade")}
+          title={shadeHex}
+        >
+          {copiedVariant === "shade" && <CheckIcon size={12} color="rgba(255,255,255,0.5)" />}
+        </div>
+      </div>
 
       <div style={{
         height: "33%",

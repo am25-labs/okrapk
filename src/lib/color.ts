@@ -19,6 +19,10 @@ export function rgbToHsl(r: number, g: number, b: number) {
   return { h: Math.round(h * 360), s: Math.round(s * 100), l: Math.round(l * 100) };
 }
 
+export function rgbToHex(r: number, g: number, b: number) {
+  return "#" + [r, g, b].map((v) => v.toString(16).padStart(2, "0")).join("");
+}
+
 export function formatForApi(hex: string) {
   const { r, g, b } = hexToRgb(hex);
   const { h, s, l } = rgbToHsl(r, g, b);
