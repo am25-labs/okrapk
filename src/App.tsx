@@ -3,7 +3,7 @@ import { listen } from "@tauri-apps/api/event";
 import { invoke } from "@tauri-apps/api/core";
 import { getVersion } from "@tauri-apps/api/app";
 import { getCurrentWindow } from "@tauri-apps/api/window";
-import { CopyIcon, CheckIcon, PipetteIcon, ArrowUpCircleIcon } from "lucide-react";
+import { PipetteIcon, ArrowUpCircleIcon } from "lucide-react";
 import Logo from "./assets/Logo";
 import { hexToRgb, rgbToHsl, rgbToHex } from "./lib/color";
 import { useAuth } from "./hooks/useAuth";
@@ -31,7 +31,11 @@ const btnStyle: React.CSSProperties = {
 function App() {
   const [color, setColor] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
-  const [copiedVariant, setCopiedVariant] = useState<"tint" | "shade" | null>(null);
+  const [copiedVariant, setCopiedVariant] = useState<"tint" | "shade" | null>(
+    null,
+  );
+  const [cssHovered, setCssHovered] = useState(false);
+  const [copiedCss, setCopiedCss] = useState(false);
   const [updateVersion, setUpdateVersion] = useState<string | null>(null);
   const [showAuth, setShowAuth] = useState(false);
 
@@ -39,17 +43,26 @@ function App() {
   const { syncStatus, saveColor } = useSync(auth);
 
   useEffect(() => {
-    invoke<string | null>("get_last_color").then((c) => { if (c) setColor(c); });
+    invoke<string | null>("get_last_color").then((c) => {
+      if (c) setColor(c);
+    });
     getVersion().then((v) => {
       getCurrentWindow().setTitle(`OKRA - ${v}`);
     });
     let unlistenColor: (() => void) | undefined;
     let unlistenUpdate: (() => void) | undefined;
-    listen<string>("color-picked", (e) => setColor(e.payload))
-      .then((fn) => { unlistenColor = fn; });
-    listen<string>("update-available", (e) => setUpdateVersion(e.payload))
-      .then((fn) => { unlistenUpdate = fn; });
-    return () => { unlistenColor?.(); unlistenUpdate?.(); };
+    listen<string>("color-picked", (e) => setColor(e.payload)).then((fn) => {
+      unlistenColor = fn;
+    });
+    listen<string>("update-available", (e) => setUpdateVersion(e.payload)).then(
+      (fn) => {
+        unlistenUpdate = fn;
+      },
+    );
+    return () => {
+      unlistenColor?.();
+      unlistenUpdate?.();
+    };
   }, []);
 
   const handleCopy = useCallback(() => {
@@ -70,21 +83,51 @@ function App() {
   if (!color) {
     return (
       <div style={{ position: "fixed", inset: 0, background: "#111" }}>
-        <div style={{ position: "absolute", top: 12, left: 14 }}>
+        <div
+          style={{
+            position: "absolute",
+            top: 8,
+            left: 10,
+            display: "flex",
+            alignItems: "center",
+            gap: 2,
+          }}
+        >
           <Logo color="rgba(255,255,255,0.2)" />
+          <SyncIcon
+            auth={auth}
+            labelColor="rgba(255,255,255,0.2)"
+            onClick={() => setShowAuth((v) => !v)}
+          />
         </div>
-        <div style={{ position: "absolute", top: 8, right: 10, display: "flex", gap: 2 }}>
+        <div
+          style={{
+            position: "absolute",
+            top: 8,
+            right: 10,
+            display: "flex",
+            gap: 2,
+          }}
+        >
           {updateVersion && (
-            <button style={{ ...btnStyle, color: "#e9f52f" }} onClick={handleUpdate} title={`Update to ${updateVersion}`}>
+            <button
+              style={{ ...btnStyle, color: "#e9f52f" }}
+              onClick={handleUpdate}
+              title={`Update to ${updateVersion}`}
+            >
               <ArrowUpCircleIcon size={16} />
             </button>
           )}
-          <SyncIcon auth={auth} labelColor="rgba(255,255,255,0.2)" onClick={() => setShowAuth((v) => !v)} />
-          <button style={{ ...btnStyle, color: "rgba(255,255,255,0.2)" }} onClick={handlePicker}>
+          <button
+            style={{ ...btnStyle, color: "rgba(255,255,255,0.2)" }}
+            onClick={handlePicker}
+          >
             <PipetteIcon size={16} />
           </button>
         </div>
-        {showAuth && <AuthPanel auth={auth} onClose={() => setShowAuth(false)} />}
+        {showAuth && (
+          <AuthPanel auth={auth} onClose={() => setShowAuth(false)} />
+        )}
       </div>
     );
   }
@@ -93,16 +136,17 @@ function App() {
   const { h, s, l } = rgbToHsl(r, g, b);
   const label = contrastColor(r, g, b);
 
-  const tintHex = rgbToHex(
-    Math.round(r + (255 - r) * 0.35),
-    Math.round(g + (255 - g) * 0.35),
-    Math.round(b + (255 - b) * 0.35),
-  );
-  const shadeHex = rgbToHex(
-    Math.round(r * 0.65),
-    Math.round(g * 0.65),
-    Math.round(b * 0.65),
-  );
+  const tr = Math.round(r + (255 - r) * 0.35);
+  const tg = Math.round(g + (255 - g) * 0.35);
+  const tb = Math.round(b + (255 - b) * 0.35);
+  const tintHex = rgbToHex(tr, tg, tb);
+  const tintLabel = contrastColor(tr, tg, tb);
+
+  const sr = Math.round(r * 0.65);
+  const sg = Math.round(g * 0.65);
+  const sb = Math.round(b * 0.65);
+  const shadeHex = rgbToHex(sr, sg, sb);
+  const shadeLabel = contrastColor(sr, sg, sb);
 
   function handleCopyVariant(variant: "tint" | "shade") {
     const hex = variant === "tint" ? tintHex : shadeHex;
@@ -112,84 +156,192 @@ function App() {
   }
 
   const rows = [
-    { format: "HEX", value: color },
     { format: "RGB", value: `${r}, ${g}, ${b}` },
     { format: "HSL", value: `${h}°, ${s}%, ${l}%` },
     { format: "CSS", value: `rgb(${r}, ${g}, ${b})` },
   ];
 
   return (
-    <div style={{ position: "fixed", inset: 0, background: color, display: "flex", flexDirection: "column" }}>
-      <div style={{ position: "absolute", top: 12, left: 14 }}>
+    <div
+      style={{
+        position: "fixed",
+        inset: 0,
+        background: color,
+        display: "flex",
+        flexDirection: "column",
+      }}
+    >
+      <div
+        style={{
+          position: "absolute",
+          top: 8,
+          left: 10,
+          display: "flex",
+          alignItems: "center",
+          gap: 2,
+        }}
+      >
         <Logo color={label} />
+        <SyncIcon
+          auth={auth}
+          labelColor={label}
+          onClick={() => setShowAuth((v) => !v)}
+        />
       </div>
 
-      <div style={{ position: "absolute", top: 8, right: 10, display: "flex", gap: 2 }}>
+      <div
+        style={{
+          position: "absolute",
+          top: 8,
+          right: 10,
+          display: "flex",
+          gap: 2,
+        }}
+      >
         {updateVersion && (
-          <button style={{ ...btnStyle, color: "#e9f52f" }} onClick={handleUpdate} title={`Update to ${updateVersion}`}>
+          <button
+            style={{ ...btnStyle, color: "#e9f52f" }}
+            onClick={handleUpdate}
+            title={`Update to ${updateVersion}`}
+          >
             <ArrowUpCircleIcon size={16} />
           </button>
         )}
-        <SyncIcon auth={auth} labelColor={label} onClick={() => setShowAuth((v) => !v)} />
         {auth.isLoggedIn && (
-          <SaveButton syncStatus={syncStatus} labelColor={label} onSave={() => saveColor(color)} />
+          <SaveButton
+            syncStatus={syncStatus}
+            labelColor={label}
+            onSave={() => saveColor(color)}
+          />
         )}
-        <button style={{ ...btnStyle, color: label }} onClick={handleCopy}>
-          {copied ? <CheckIcon size={16} /> : <CopyIcon size={16} />}
-        </button>
         <button style={{ ...btnStyle, color: label }} onClick={handlePicker}>
           <PipetteIcon size={16} />
         </button>
       </div>
 
-      <div style={{ flex: 1 }} />
+      <div
+        style={{
+          flex: 1,
+          cursor: "pointer",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          paddingTop: 18,
+        }}
+        onClick={handleCopy}
+      >
+        <span
+          style={{
+            fontFamily: '"Martian Mono", monospace',
+            fontSize: 21,
+            fontWeight: copied ? 700 : 400,
+            color: label,
+          }}
+        >
+          {copied ? "Copied" : color}
+        </span>
+      </div>
 
-      <div style={{ display: "flex", height: 28 }}>
+      <div style={{ display: "flex", height: 36 }}>
         <div
-          style={{ flex: 1, background: tintHex, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
+          style={{
+            flex: 1,
+            background: tintHex,
+            cursor: "pointer",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
           onClick={() => handleCopyVariant("tint")}
           title={tintHex}
         >
-          {copiedVariant === "tint" && <CheckIcon size={12} color="rgba(0,0,0,0.35)" />}
+          <span
+            style={{
+              fontFamily: '"Martian Mono", monospace',
+              fontSize: 12,
+              fontWeight: copiedVariant === "tint" ? 700 : 400,
+              color: tintLabel,
+            }}
+          >
+            {copiedVariant === "tint" ? "Copied" : tintHex}
+          </span>
         </div>
         <div
-          style={{ flex: 1, background: shadeHex, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
+          style={{
+            flex: 1,
+            background: shadeHex,
+            cursor: "pointer",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
           onClick={() => handleCopyVariant("shade")}
           title={shadeHex}
         >
-          {copiedVariant === "shade" && <CheckIcon size={12} color="rgba(255,255,255,0.5)" />}
+          <span
+            style={{
+              fontFamily: '"Martian Mono", monospace',
+              fontSize: 12,
+              fontWeight: copiedVariant === "shade" ? 700 : 400,
+              color: shadeLabel,
+            }}
+          >
+            {copiedVariant === "shade" ? "Copied" : shadeHex}
+          </span>
         </div>
       </div>
 
-      <div style={{
-        height: "33%",
-        background: `rgb(${Math.round(r*0.65)}, ${Math.round(g*0.65)}, ${Math.round(b*0.65)})`,
-        padding: "0 20px",
-        display: "flex",
-        flexDirection: "column",
-        justifyContent: "center",
-        gap: 10,
-      }}>
-        {rows.map(({ format, value }) => (
-          <div key={format} style={{ display: "flex", alignItems: "center" }}>
-            <span style={{
-              width: 40,
-              fontSize: 12,
-              fontWeight: 700,
-              color: "rgba(255,255,255,0.45)",
-              flexShrink: 0,
-            }}>
-              {format}
-            </span>
-            <span style={{
-              fontSize: 14,
-              fontFamily: '"JetBrains Mono", monospace',
-              color: "#fff",
-            }}>
-              {value}
-            </span>
-          </div>
-        ))}
+      <div
+        style={{
+          height: "33%",
+          background: `rgb(${Math.round(r * 0.65)}, ${Math.round(g * 0.65)}, ${Math.round(b * 0.65)})`,
+          padding: "0 20px",
+          display: "flex",
+          flexDirection: "column",
+          justifyContent: "center",
+          gap: 10,
+        }}
+      >
+        {rows.map(({ format, value }) => {
+          const isCss = format === "CSS";
+          return (
+            <div key={format} style={{ display: "flex", alignItems: "center" }}>
+              <span
+                style={{
+                  width: 40,
+                  fontSize: 12,
+                  fontWeight: 500,
+                  color: "rgba(255,255,255,0.45)",
+                  flexShrink: 0,
+                }}
+              >
+                {format}
+              </span>
+              <span
+                style={{
+                  fontSize: 14,
+                  fontFamily: '"Martian Mono", monospace',
+                  color: "#fff",
+                  fontWeight: isCss && cssHovered ? 700 : 400,
+                  cursor: isCss ? "pointer" : "default",
+                }}
+                onClick={
+                  isCss
+                    ? () => {
+                        navigator.clipboard.writeText(value);
+                        setCopiedCss(true);
+                        setTimeout(() => setCopiedCss(false), 1500);
+                      }
+                    : undefined
+                }
+                onMouseEnter={isCss ? () => setCssHovered(true) : undefined}
+                onMouseLeave={isCss ? () => setCssHovered(false) : undefined}
+              >
+                {isCss && copiedCss ? "Copied" : value}
+              </span>
+            </div>
+          );
+        })}
       </div>
 
       {showAuth && <AuthPanel auth={auth} onClose={() => setShowAuth(false)} />}

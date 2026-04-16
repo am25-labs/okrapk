@@ -20,7 +20,7 @@ export function rgbToHsl(r: number, g: number, b: number) {
 }
 
 export function rgbToHex(r: number, g: number, b: number) {
-  return "#" + [r, g, b].map((v) => v.toString(16).padStart(2, "0")).join("");
+  return "#" + [r, g, b].map((v) => v.toString(16).padStart(2, "0")).join("").toUpperCase();
 }
 
 export function formatForApi(hex: string) {
