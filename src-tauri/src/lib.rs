@@ -282,7 +282,9 @@ async fn check_for_update(app: &tauri::AppHandle) {
 async fn install_update(app: tauri::AppHandle) {
     if let Ok(updater) = app.updater() {
         if let Ok(Some(update)) = updater.check().await {
-            let _ = update.download_and_install(|_, _| {}, || {}).await;
+            if update.download_and_install(|_, _| {}, || {}).await.is_ok() {
+                app.restart();
+            }
         }
     }
 }
