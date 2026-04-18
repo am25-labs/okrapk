@@ -37,6 +37,7 @@ function App() {
   const [cssHovered, setCssHovered] = useState(false);
   const [copiedCss, setCopiedCss] = useState(false);
   const [updateVersion, setUpdateVersion] = useState<string | null>(null);
+  const [isUpdating, setIsUpdating] = useState(false);
   const [showAuth, setShowAuth] = useState(false);
 
   const auth = useAuth();
@@ -77,8 +78,13 @@ function App() {
   }, []);
 
   const handleUpdate = useCallback(() => {
-    invoke("install_update").catch(console.error);
-  }, []);
+    if (isUpdating) return;
+    setIsUpdating(true);
+    invoke("install_update").catch((e) => {
+      console.error(e);
+      setIsUpdating(false);
+    });
+  }, [isUpdating]);
 
   if (!color) {
     return (
@@ -111,9 +117,15 @@ function App() {
         >
           {updateVersion && (
             <button
-              style={{ ...btnStyle, color: "#e9f52f" }}
+              style={{
+                ...btnStyle,
+                color: "#e9f52f",
+                opacity: isUpdating ? 0.6 : 1,
+                animation: isUpdating ? "spin 1s linear infinite" : "none",
+              }}
               onClick={handleUpdate}
-              title={`Update to ${updateVersion}`}
+              title={isUpdating ? "Installing update..." : `Update to ${updateVersion}`}
+              disabled={isUpdating}
             >
               <ArrowUpCircleIcon size={16} />
             </button>
