@@ -12,8 +12,6 @@ jobs:
       contents: write
     env:
       FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
-      TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
-
 
     steps:
       - uses: actions/checkout@v4
@@ -29,6 +27,14 @@ jobs:
 
       - name: Install dependencies
         run: pnpm install
+
+      - name: Write signing key
+        shell: bash
+        env:
+          SIGNING_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+        run: |
+          printf '%s' "$SIGNING_KEY" > "$RUNNER_TEMP/signing.key"
+          echo "TAURI_SIGNING_PRIVATE_KEY_PATH=$RUNNER_TEMP/signing.key" >> $GITHUB_ENV
 
       - name: Build and release
         uses: tauri-apps/tauri-action@v0
@@ -70,14 +76,19 @@ jobs:
       - name: Install dependencies
         run: pnpm install
 
+      - name: Write signing key
+        env:
+          SIGNING_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+        run: |
+          printf '%s' "$SIGNING_KEY" > "$RUNNER_TEMP/signing.key"
+          echo "TAURI_SIGNING_PRIVATE_KEY_PATH=$RUNNER_TEMP/signing.key" >> $GITHUB_ENV
+
       - name: Build and release
         uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           VITE_API_URL: ${{ secrets.VITE_API_URL }}
           VITE_DESKTOP_KEY: ${{ secrets.VITE_DESKTOP_KEY }}
-          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
-    
         with:
           tagName: ${{ github.ref_name }}
           releaseName: ${{ github.ref_name }}
