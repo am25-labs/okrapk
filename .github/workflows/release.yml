@@ -47,6 +47,8 @@ jobs:
     needs: release-windows
     permissions:
       contents: write
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
     steps:
       - uses: actions/checkout@v4
@@ -82,3 +84,4 @@ jobs:
           releaseDraft: false
           prerelease: false
           args: --target universal-apple-darwin
+          updaterJsonKeepUniversal: true
